@@ -32,3 +32,5 @@ There is also a folder named "Data Preprocessing" which contain notebooks and sc
 6.  [CAT2000: A Large Scale Fixation Dataset for Boosting Saliency Research [Itti et al 2015, CVPR]](http://saliency.mit.edu/cat2000_visualization.html)
 
 7.  [SALICON: Saliency in Context [Jiang et al 2015, CVPR]](http://salicon.net/)
+
+8.  [What Do Saliency Models Predict? [Koehler et al 2014, JoV]](https://jov.arvojournals.org/article.aspx?articleid=2121547)
