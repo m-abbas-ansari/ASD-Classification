@@ -1,5 +1,7 @@
 ## Improved Visual Attention Classification for Autism Spectrum Disorder through Time-Dependent Representations.
 
+![task image](task.png)
+
 People with autism spectrum disorder (ASD) tend to attend differently to visual stimuli when compared to neurotypical individuals. These differences in visual attention can be used for the automatic screening of ASD. We classify a given sequence of fixations on a particular image belonging to either a person not having or having ASD. A deep learning framework is proposed which extracts visual feature embeddings around each point of fixation and processes them sequentially using recurrent neural networks (LSTM) [1] or using transformers [2]. We also propose to exploit temporal information of each fixation such as duration using time-masking and time-event joint embedding techniques [3].
 
 With duration-sensitive visual features for each fixation, we achieve an improvement of 11.46% in the F1 score compared to the baseline recurrent neural network without duration encoded into it. We also experiment with transformers and demonstrate their potential for the classification of visual attention.
