@@ -1,0 +1,174 @@
+2023-06-07 14:40:56,981 INFO    StreamThr :11709 [internal.py:wandb_internal():86] W&B internal server running at pid: 11709, started at: 2023-06-07 14:40:56.981128
+2023-06-07 14:40:56,986 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: status
+2023-06-07 14:40:56,988 INFO    WriterThread:11709 [datastore.py:open_for_write():85] open: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/run-2919uint.wandb
+2023-06-07 14:40:56,988 DEBUG   SenderThread:11709 [sender.py:send():369] send: header
+2023-06-07 14:40:57,013 DEBUG   SenderThread:11709 [sender.py:send():369] send: run
+2023-06-07 14:40:57,618 INFO    SenderThread:11709 [dir_watcher.py:__init__():211] watching files in: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files
+2023-06-07 14:40:57,619 INFO    SenderThread:11709 [sender.py:_start_run_threads():1100] run started: 2919uint with start time 1686141656.981886
+2023-06-07 14:40:57,620 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: summary_record
+2023-06-07 14:40:57,623 INFO    SenderThread:11709 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-06-07 14:40:57,651 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: check_version
+2023-06-07 14:40:57,651 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: check_version
+2023-06-07 14:40:58,234 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: run_start
+2023-06-07 14:40:58,237 DEBUG   HandlerThread:11709 [system_info.py:__init__():31] System info init
+2023-06-07 14:40:58,237 DEBUG   HandlerThread:11709 [system_info.py:__init__():46] System info init done
+2023-06-07 14:40:58,238 INFO    HandlerThread:11709 [system_monitor.py:start():181] Starting system monitor
+2023-06-07 14:40:58,238 INFO    SystemMonitor:11709 [system_monitor.py:_start():145] Starting system asset monitoring threads
+2023-06-07 14:40:58,238 INFO    HandlerThread:11709 [system_monitor.py:probe():201] Collecting system info
+2023-06-07 14:40:58,240 INFO    SystemMonitor:11709 [interfaces.py:start():190] Started cpu monitoring
+2023-06-07 14:40:58,241 INFO    SystemMonitor:11709 [interfaces.py:start():190] Started disk monitoring
+2023-06-07 14:40:58,243 INFO    SystemMonitor:11709 [interfaces.py:start():190] Started memory monitoring
+2023-06-07 14:40:58,245 INFO    SystemMonitor:11709 [interfaces.py:start():190] Started network monitoring
+2023-06-07 14:40:58,302 DEBUG   HandlerThread:11709 [system_info.py:probe():195] Probing system
+2023-06-07 14:40:58,323 DEBUG   HandlerThread:11709 [system_info.py:_probe_git():180] Probing git
+2023-06-07 14:40:58,369 DEBUG   HandlerThread:11709 [system_info.py:_probe_git():188] Probing git done
+2023-06-07 14:40:58,369 DEBUG   HandlerThread:11709 [system_info.py:probe():240] Probing system done
+2023-06-07 14:40:58,370 DEBUG   HandlerThread:11709 [system_monitor.py:probe():210] {'os': 'Linux-5.15.0-71-generic-x86_64-with-glibc2.29', 'python': '3.8.10', 'heartbeatAt': '2023-06-07T12:40:58.303086', 'startedAt': '2023-06-07T12:40:56.969864', 'docker': None, 'cuda': None, 'args': ('--epoch', '1', '--batch_size', '2', '--t_i', '1', '--t_f', '3', '--v_i', '3', '--v_f', '5'), 'state': 'running', 'program': 'main.py', 'codePath': 'main.py', 'git': {'remote': 'https://github.com/m-abbas-ansari/ASD-Classification.git', 'commit': 'd2bffcc9546e4b48e36277d0793b2015374ce335'}, 'email': 'abbas@uroojcareer.com', 'root': '/home/abbas/ASD_Research/Code/ASD-Classification', 'host': 'abbas-lp', 'username': 'abbas', 'executable': '/usr/bin/python3', 'cpu_count': 2, 'cpu_count_logical': 4, 'cpu_freq': {'current': 1.54325, 'min': 400.0, 'max': 3400.0}, 'cpu_freq_per_core': [{'current': 0.8, 'min': 400.0, 'max': 3400.0}, {'current': 0.799, 'min': 400.0, 'max': 3400.0}, {'current': 2.8, 'min': 400.0, 'max': 3400.0}, {'current': 0.8, 'min': 400.0, 'max': 3400.0}], 'disk': {'total': 233.17998886108398, 'used': 161.77685546875}, 'memory': {'total': 7.622409820556641}}
+2023-06-07 14:40:58,370 INFO    HandlerThread:11709 [system_monitor.py:probe():211] Finished collecting system info
+2023-06-07 14:40:58,370 INFO    HandlerThread:11709 [system_monitor.py:probe():214] Publishing system info
+2023-06-07 14:40:58,370 DEBUG   HandlerThread:11709 [system_info.py:_save_pip():51] Saving list of pip packages installed into the current environment
+2023-06-07 14:40:58,371 DEBUG   HandlerThread:11709 [system_info.py:_save_pip():67] Saving pip packages done
+2023-06-07 14:40:58,373 INFO    HandlerThread:11709 [system_monitor.py:probe():216] Finished publishing system info
+2023-06-07 14:40:58,378 DEBUG   SenderThread:11709 [sender.py:send():369] send: files
+2023-06-07 14:40:58,378 INFO    SenderThread:11709 [sender.py:_save_file():1354] saving file wandb-metadata.json with policy now
+2023-06-07 14:40:58,387 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: stop_status
+2023-06-07 14:40:58,387 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: stop_status
+2023-06-07 14:40:58,613 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_created():272] file/dir created: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/wandb-summary.json
+2023-06-07 14:40:58,613 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_created():272] file/dir created: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/requirements.txt
+2023-06-07 14:40:58,613 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_created():272] file/dir created: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/wandb-metadata.json
+2023-06-07 14:40:58,621 DEBUG   SenderThread:11709 [sender.py:send():369] send: telemetry
+2023-06-07 14:40:59,158 DEBUG   SenderThread:11709 [sender.py:send():369] send: exit
+2023-06-07 14:40:59,158 INFO    SenderThread:11709 [sender.py:send_exit():574] handling exit code: 0
+2023-06-07 14:40:59,158 INFO    SenderThread:11709 [sender.py:send_exit():576] handling runtime: 0
+2023-06-07 14:40:59,159 INFO    SenderThread:11709 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-06-07 14:40:59,159 INFO    SenderThread:11709 [sender.py:send_exit():582] send defer
+2023-06-07 14:40:59,159 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,159 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 0
+2023-06-07 14:40:59,160 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,160 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 0
+2023-06-07 14:40:59,160 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 1
+2023-06-07 14:40:59,160 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,160 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 1
+2023-06-07 14:40:59,160 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,160 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 1
+2023-06-07 14:40:59,160 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 2
+2023-06-07 14:40:59,160 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,160 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 2
+2023-06-07 14:40:59,160 INFO    HandlerThread:11709 [system_monitor.py:finish():190] Stopping system monitor
+2023-06-07 14:40:59,161 DEBUG   SystemMonitor:11709 [system_monitor.py:_start():159] Starting system metrics aggregation loop
+2023-06-07 14:40:59,162 DEBUG   SystemMonitor:11709 [system_monitor.py:_start():166] Finished system metrics aggregation loop
+2023-06-07 14:40:59,162 DEBUG   SystemMonitor:11709 [system_monitor.py:_start():170] Publishing last batch of metrics
+2023-06-07 14:40:59,161 INFO    HandlerThread:11709 [interfaces.py:finish():202] Joined cpu monitor
+2023-06-07 14:40:59,163 INFO    HandlerThread:11709 [interfaces.py:finish():202] Joined disk monitor
+2023-06-07 14:40:59,163 INFO    HandlerThread:11709 [interfaces.py:finish():202] Joined memory monitor
+2023-06-07 14:40:59,163 INFO    HandlerThread:11709 [interfaces.py:finish():202] Joined network monitor
+2023-06-07 14:40:59,163 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,164 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 2
+2023-06-07 14:40:59,164 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 3
+2023-06-07 14:40:59,164 DEBUG   SenderThread:11709 [sender.py:send():369] send: stats
+2023-06-07 14:40:59,164 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,165 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 3
+2023-06-07 14:40:59,165 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,165 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 3
+2023-06-07 14:40:59,165 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 4
+2023-06-07 14:40:59,165 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,165 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 4
+2023-06-07 14:40:59,166 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,166 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 4
+2023-06-07 14:40:59,166 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 5
+2023-06-07 14:40:59,166 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,166 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 5
+2023-06-07 14:40:59,167 DEBUG   SenderThread:11709 [sender.py:send():369] send: summary
+2023-06-07 14:40:59,167 INFO    SenderThread:11709 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-06-07 14:40:59,168 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,168 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 5
+2023-06-07 14:40:59,168 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 6
+2023-06-07 14:40:59,168 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,168 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 6
+2023-06-07 14:40:59,169 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,169 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 6
+2023-06-07 14:40:59,173 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: status_report
+2023-06-07 14:40:59,262 INFO    wandb-upload_0:11709 [upload_job.py:push():133] Uploaded file /tmp/tmpjxn6wmtwwandb/qe6vgqg4-wandb-metadata.json
+2023-06-07 14:40:59,431 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 7
+2023-06-07 14:40:59,431 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:40:59,432 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 7
+2023-06-07 14:40:59,432 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:40:59,433 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 7
+2023-06-07 14:40:59,612 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/config.yaml
+2023-06-07 14:40:59,612 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/wandb-summary.json
+2023-06-07 14:40:59,613 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_created():272] file/dir created: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/output.log
+2023-06-07 14:41:00,160 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: poll_exit
+2023-06-07 14:41:00,633 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 8
+2023-06-07 14:41:00,634 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: poll_exit
+2023-06-07 14:41:00,634 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:00,636 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 8
+2023-06-07 14:41:00,637 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:00,638 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 8
+2023-06-07 14:41:00,638 INFO    SenderThread:11709 [job_builder.py:build():232] Attempting to build job artifact
+2023-06-07 14:41:00,639 INFO    SenderThread:11709 [job_builder.py:build():256] is repo sourced job
+2023-06-07 14:41:00,652 INFO    SenderThread:11709 [job_builder.py:build():297] adding wandb-job metadata file
+2023-06-07 14:41:00,662 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 9
+2023-06-07 14:41:00,662 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:00,664 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 9
+2023-06-07 14:41:00,666 DEBUG   SenderThread:11709 [sender.py:send():369] send: artifact
+2023-06-07 14:41:01,162 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: poll_exit
+2023-06-07 14:41:01,613 INFO    Thread-12 :11709 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/output.log
+2023-06-07 14:41:01,948 INFO    SenderThread:11709 [sender.py:send_artifact():1450] sent artifact job-https___github.com_m-abbas-ansari_ASD-Classification.git_main.py - {'id': 'QXJ0aWZhY3Q6NDgwMDE3MTky', 'digest': 'e112adba296b42b399102ec0866e2381', 'state': 'COMMITTED', 'aliases': [{'artifactCollectionName': 'job-https___github.com_m-abbas-ansari_ASD-Classification.git_main.py', 'alias': 'latest'}, {'artifactCollectionName': 'job-https___github.com_m-abbas-ansari_ASD-Classification.git_main.py', 'alias': 'v1'}], 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjc1MDg2OTMw', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6NDgwMDE3MTky', 'versionIndex': 1}}, 'version': 'v1'}
+2023-06-07 14:41:01,948 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:01,948 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 9
+2023-06-07 14:41:01,948 INFO    SenderThread:11709 [dir_watcher.py:finish():359] shutting down directory watcher
+2023-06-07 14:41:02,615 INFO    SenderThread:11709 [dir_watcher.py:finish():389] scan: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files
+2023-06-07 14:41:02,616 INFO    SenderThread:11709 [dir_watcher.py:finish():403] scan save: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/output.log output.log
+2023-06-07 14:41:02,617 INFO    SenderThread:11709 [dir_watcher.py:finish():403] scan save: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/wandb-metadata.json wandb-metadata.json
+2023-06-07 14:41:02,618 INFO    SenderThread:11709 [dir_watcher.py:finish():403] scan save: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/config.yaml config.yaml
+2023-06-07 14:41:02,630 INFO    SenderThread:11709 [dir_watcher.py:finish():403] scan save: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/requirements.txt requirements.txt
+2023-06-07 14:41:02,640 INFO    SenderThread:11709 [dir_watcher.py:finish():403] scan save: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/wandb-summary.json wandb-summary.json
+2023-06-07 14:41:02,642 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 10
+2023-06-07 14:41:02,643 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: poll_exit
+2023-06-07 14:41:02,644 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:02,649 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 10
+2023-06-07 14:41:02,666 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:02,667 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 10
+2023-06-07 14:41:02,668 INFO    SenderThread:11709 [file_pusher.py:finish():159] shutting down file pusher
+2023-06-07 14:41:03,261 INFO    wandb-upload_0:11709 [upload_job.py:push():133] Uploaded file /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/output.log
+2023-06-07 14:41:03,579 INFO    wandb-upload_1:11709 [upload_job.py:push():133] Uploaded file /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/config.yaml
+2023-06-07 14:41:03,615 INFO    wandb-upload_3:11709 [upload_job.py:push():133] Uploaded file /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/wandb-summary.json
+2023-06-07 14:41:04,057 INFO    wandb-upload_2:11709 [upload_job.py:push():133] Uploaded file /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/files/requirements.txt
+2023-06-07 14:41:04,258 INFO    Thread-11 :11709 [sender.py:transition_state():602] send defer: 11
+2023-06-07 14:41:04,259 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:04,260 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 11
+2023-06-07 14:41:04,261 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:04,262 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 11
+2023-06-07 14:41:04,262 INFO    SenderThread:11709 [file_pusher.py:join():164] waiting for file pusher
+2023-06-07 14:41:04,262 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 12
+2023-06-07 14:41:04,263 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:04,263 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 12
+2023-06-07 14:41:04,264 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:04,265 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 12
+2023-06-07 14:41:04,487 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 13
+2023-06-07 14:41:04,488 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:04,488 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 13
+2023-06-07 14:41:04,489 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:04,489 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 13
+2023-06-07 14:41:04,491 INFO    SenderThread:11709 [sender.py:transition_state():602] send defer: 14
+2023-06-07 14:41:04,493 DEBUG   SenderThread:11709 [sender.py:send():369] send: final
+2023-06-07 14:41:04,493 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: defer
+2023-06-07 14:41:04,493 DEBUG   SenderThread:11709 [sender.py:send():369] send: footer
+2023-06-07 14:41:04,494 INFO    HandlerThread:11709 [handler.py:handle_request_defer():170] handle defer: 14
+2023-06-07 14:41:04,495 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: defer
+2023-06-07 14:41:04,495 INFO    SenderThread:11709 [sender.py:send_request_defer():598] handle sender defer: 14
+2023-06-07 14:41:04,499 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: poll_exit
+2023-06-07 14:41:04,499 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: server_info
+2023-06-07 14:41:04,500 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: get_summary
+2023-06-07 14:41:04,500 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: sampled_history
+2023-06-07 14:41:04,502 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: poll_exit
+2023-06-07 14:41:04,503 DEBUG   SenderThread:11709 [sender.py:send_request():396] send_request: server_info
+2023-06-07 14:41:04,792 INFO    MainThread:11709 [wandb_run.py:_footer_history_summary_info():3467] rendering history
+2023-06-07 14:41:04,792 INFO    MainThread:11709 [wandb_run.py:_footer_history_summary_info():3499] rendering summary
+2023-06-07 14:41:04,793 INFO    MainThread:11709 [wandb_run.py:_footer_sync_info():3426] logging synced files
+2023-06-07 14:41:04,794 DEBUG   HandlerThread:11709 [handler.py:handle_request():144] handle_request: shutdown
+2023-06-07 14:41:04,794 INFO    HandlerThread:11709 [handler.py:finish():854] shutting down handler
+2023-06-07 14:41:05,502 INFO    WriterThread:11709 [datastore.py:close():298] close: /home/abbas/ASD_Research/Code/ASD-Classification/wandb/run-20230607_144056-2919uint/run-2919uint.wandb
+2023-06-07 14:41:05,792 INFO    SenderThread:11709 [sender.py:finish():1526] shutting down sender
+2023-06-07 14:41:05,792 INFO    SenderThread:11709 [file_pusher.py:finish():159] shutting down file pusher
+2023-06-07 14:41:05,792 INFO    SenderThread:11709 [file_pusher.py:join():164] waiting for file pusher

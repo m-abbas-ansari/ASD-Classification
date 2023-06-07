@@ -1,0 +1,41 @@
+########
+Loading data
+Length of training data:  240
+Length of validation data:  60
+########
+Creating data loaders
+Creating model
+CUDA is not available. Model on CPU
+Creating optimizer
+Creating loss function
+########
+Training loop
+Epoch:  1
+
+
+
+  0%|▏                                                                                                                                                                                           | 3/3051 [00:36<10:11:54, 12.05s/it]
+Traceback (most recent call last):
+  File "main.py", line 198, in <module>
+    main()
+  File "main.py", line 190, in main
+    iteration = train(model, trainloader, optimizer, criterion, iteration)
+  File "main.py", line 75, in train
+    loss.backward()
+  File "/home/abbas/.local/lib/python3.8/site-packages/torch/_tensor.py", line 363, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
+  File "/home/abbas/.local/lib/python3.8/site-packages/torch/autograd/__init__.py", line 173, in backward
+    Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "main.py", line 198, in <module>
+    main()
+  File "main.py", line 190, in main
+    iteration = train(model, trainloader, optimizer, criterion, iteration)
+  File "main.py", line 75, in train
+    loss.backward()
+  File "/home/abbas/.local/lib/python3.8/site-packages/torch/_tensor.py", line 363, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
+  File "/home/abbas/.local/lib/python3.8/site-packages/torch/autograd/__init__.py", line 173, in backward
+    Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

@@ -1,0 +1,14 @@
+########
+Loading data
+Length of training data:  2
+Length of validation data:  2
+########
+Creating data loaders
+Length of training set:  52
+Length of validation set:  51
+Creating model
+CUDA is not available. Model on CPU
+Creating optimizer
+Creating loss function
+########
+Training loop
