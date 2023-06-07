@@ -41,9 +41,12 @@ class G_LSTM(nn.Module):
 		return state
 
 class Sal_seq(nn.Module):
-	def __init__(self,backend,seq_len,hidden_size=512):
+	def __init__(self,backend,seq_len,hidden_size=512, mask=False, joint=False, time_proj_dim=128):
 		super(Sal_seq,self).__init__()
 		self.seq_len = seq_len
+		self.mask = mask
+		self.joint = joint
+  
 		# defining backend
 		if backend == 'resnet':
 			resnet = models.resnet50(pretrained=True)
@@ -59,6 +62,14 @@ class Sal_seq(nn.Module):
 		self.rnn = G_LSTM(input_size,hidden_size)
 		self.decoder = nn.Linear(hidden_size,1,bias=True) # comment for multi-modal distillation
 		self.hidden_size = hidden_size
+  
+		# time projection
+		if self.joint or self.mask:
+			self.time_projection = nn.Linear(1, time_proj_dim)
+		if self.mask:
+			self.mask_projection = nn.Linear(time_proj_dim, input_size)
+		if self.joint:
+			self.time_embedding = nn.Linear(time_proj_dim, input_size, bias=False)
 
 	def init_resnet(self,resnet):
 		self.backend = nn.Sequential(*list(resnet.children())[:-2])
@@ -97,7 +108,7 @@ class Sal_seq(nn.Module):
 		x = x.sum(1).view(batch_size, x.size(2))
 		return x
 
-	def forward(self,x,fixation):
+	def forward(self,x,fixation, duration):
 		valid_len = self.process_lengths(fixation) # computing valid fixation lengths
 		x = self.backend(x)
 		batch, feat, h, w = x.size()
@@ -107,11 +118,25 @@ class Sal_seq(nn.Module):
 		state = self.init_hidden(batch) # initialize hidden state
 		fixation = fixation.view(fixation.size(0),1,fixation.size(1))
 		fixation = fixation.expand(fixation.size(0),feat,fixation.size(2))
-		x = x.gather(2,fixation)
+		x = x.gather(2,fixation.to(torch.int64))
 		output = []
 		for i in range(self.seq_len):
 			# extract features corresponding to current fixation
 			cur_x = x[:,:,i].contiguous()
+			if self.joint or self.mask:
+				cur_t = duration[:,i].contiguous().unsqueeze(1)
+				cur_t_proj = self.time_projection(cur_t)
+				if self.joint: # time-event joint embedding3
+					cur_t_enc = torch.softmax(cur_t_proj, dim=1)
+					cur_t_emb = self.time_embedding(cur_t_enc)
+					cur_x = (cur_x + cur_t_emb)/2.0
+
+				if self.mask: # time mask
+					cur_t_proj = torch.relu(cur_t_proj)
+					cur_t_proj = self.mask_projection(cur_t_proj)
+					time_mask = torch.sigmoid(cur_t_proj)
+					cur_x = torch.mul(cur_x, time_mask)
+
 			#LSTM forward
 			state = self.rnn(cur_x,state)
 			output.append(state[0].view(batch,1,self.hidden_size))
@@ -124,7 +149,7 @@ class Sal_seq(nn.Module):
 
 if __name__ == '__main__':
 	print('Testing model')
-	model = Sal_seq(backend='resnet',seq_len=14)
+	model = Sal_seq(backend='resnet',seq_len=14, mask=True, joint=True)
 	if torch.cuda.is_available():
 		model = model.cuda()
 		print("Model on current device: ",torch.cuda.current_device())
@@ -137,12 +162,13 @@ if __name__ == '__main__':
 	# Sending dummy data
 	x = Variable(torch.randn(2,3,600,800))
 	fixation = Variable(torch.randint(2, 5, (2,14)).type(torch.LongTensor))
+	duration = Variable(torch.randint(2, 5, (2,14))).type(torch.FloatTensor)
 	print('Input shape: ',x.shape)
 	print('Fixation shape: ',fixation.shape)
 	if torch.cuda.is_available():
 		x = x.cuda()
 		fixation = fixation.cuda()	
-	output = model(x,fixation)
+	output = model(x,fixation, duration)
 	print('Output shape: ',output.shape)
 	print('Done')
 	

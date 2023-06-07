@@ -34,6 +34,8 @@ parser.add_argument('--t_i', type=int, default=1, help='Start index of training 
 parser.add_argument('--t_f', type=int, default=241, help='End index of training data')
 parser.add_argument('--v_i', type=int, default=241, help='Start index of validation data')
 parser.add_argument('--v_f', type=int, default=301, help='End index of validation data')
+parser.add_argument('--mask', type=bool, default=False, help='Time Masking')
+parser.add_argument('--joint', type=bool, default=False, help='Joint Time Embedding')
 
 args = parser.parse_args()
 
@@ -65,6 +67,7 @@ def train(model, trainloader, optimizer, criterion, iteration):
     for i, (img, label, fixation, duration) in enumerate(tqdm(trainloader)):
         if len(img) == 1: # Skip if batch size is 1
             continue
+        duration = duration.type(torch.FloatTensor)
         if torch.cuda.is_available(): # Move to GPU if available
             img = img.cuda()
             label = label.cuda()
@@ -73,7 +76,7 @@ def train(model, trainloader, optimizer, criterion, iteration):
         optimizer.zero_grad()
         
         # Forward pass
-        pred = model(img, fixation)
+        pred = model(img, fixation, duration)
         
         # Compute loss
         loss = criterion(pred, label)
@@ -122,13 +125,14 @@ def validate(model, valloader, criterion):
         for img, label, fixation, duration in tqdm(valloader):
             if len(img) == 1: # Skip if batch size is 1
                 continue
+            duration = duration.type(torch.FloatTensor)
             if torch.cuda.is_available(): # Move to GPU if available
                 img = img.cuda()
                 label = label.cuda()
                 fixation = fixation.cuda()
                 duration = duration.cuda()
 
-            pred = model(img, fixation)
+            pred = model(img, fixation, duration)
 
             preds.append(pred.detach().cpu().numpy())
             targets.append(label.detach().cpu().numpy())
@@ -177,7 +181,12 @@ def main():
     
     # Model
     print("Creating model")
-    model = Sal_seq(backend=args.backend,seq_len=args.max_len,hidden_size=args.hidden_size)
+    model = Sal_seq(backend=args.backend,seq_len=args.max_len,
+                    hidden_size=args.hidden_size,
+                    mask=args.mask, joint=args.joint)
+    if args.mask or args.joint:
+        print("Mask: ", args.mask)
+        print("Joint: ", args.joint)
     if torch.cuda.is_available():
         model = model.cuda()
         print("Model on current device: ",torch.cuda.current_device())
