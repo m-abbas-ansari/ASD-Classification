@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision import models
+from transformers import BertForSequenceClassification
 import os
 
 class G_LSTM(nn.Module):
@@ -40,6 +41,31 @@ class G_LSTM(nn.Module):
 
 		return state
 
+# class ExtractFixEmbedding(nn.Module):
+# 	"""
+# 	Passes image through cnn backend and extracts features corresponding to each region of
+# 	fixation to give a sequence of visual embeddings for each fixation.
+# 	"""
+# 	def __init__(self, backend, seq_len, hidden_size=512):
+# 		super(ExtractFixEmbedding, self).__init__()
+# 		self.seq_len = seq_len
+# 		if backend == 'resnet':
+# 			resnet = models.resnet50(pretrained=True)
+# 			self.init_resnet(resnet)
+# 			input_size = 2048
+# 		elif backend == 'vgg':
+# 			vgg = models.vgg19(pretrained=True)
+# 			self.init_vgg(vgg)
+# 			input_size = 512
+# 		else:
+# 			assert 0, 'Backend not implemented'
+
+# 	def init_resnet(self,resnet):
+# 		self.backend = nn.Sequential(*list(resnet.children())[:-2])
+  
+# 	def init_vgg(self,vgg):
+# 		self.backend = nn.Sequential(*list(vgg.features.children())[:-2])
+
 class Sal_seq(nn.Module):
 	def __init__(self,backend,seq_len,hidden_size=512, mask=False, joint=False, time_proj_dim=128):
 		super(Sal_seq,self).__init__()
@@ -49,7 +75,7 @@ class Sal_seq(nn.Module):
   
 		# defining backend
 		if backend == 'resnet':
-			resnet = models.resnet50(pretrained=True)
+			resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
 			self.init_resnet(resnet)
 			input_size = 2048
 		elif backend == 'vgg':
@@ -147,9 +173,61 @@ class Sal_seq(nn.Module):
 		output = torch.sigmoid(self.decoder(output))
 		return output
 
+class SalBert(nn.Module):
+	def __init__(self,backend, seq_len, hidden_size=768):
+		super(SalBert,self).__init__()
+		self.seq_len = seq_len
+		self.hidden_size = hidden_size
+  
+		# defining backend
+		if backend == 'resnet':
+			resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+			self.init_resnet(resnet)
+			input_size = 2048
+		elif backend == 'vgg':
+			vgg = models.vgg19(pretrained=True)
+			self.init_vgg(vgg)
+			input_size = 512
+		else:
+			assert 0, 'Backend not implemented'
+
+		self.input_encode = nn.Linear(input_size,hidden_size,bias=True)
+		model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1, 
+                                                        output_attentions=False,
+                                                        output_hidden_states=False)
+		self.bert = model.bert.encoder
+		self.bert_pooler = model.bert.pooler
+		self.classifier = model.classifier
+  
+	def init_resnet(self,resnet):
+		self.backend = nn.Sequential(*list(resnet.children())[:-2])
+
+	def init_vgg(self,vgg):
+		self.backend = nn.Sequential(*list(vgg.features.children())[:-2])
+
+	def forward(self,x,fixation, duration):
+		x = self.backend(x)
+		batch, feat, h, w = x.size()
+		x = x.view(batch,feat,-1)
+		x = torch.transpose(x, 1,2)
+  
+		fixation = fixation.unsqueeze(dim=2) # [12,14, 1]
+		fixation = fixation.expand(fixation.size(0),fixation.size(1), feat) # [12, 2048, 14]
+		x = x.gather(1,fixation.to(torch.int64))
+  
+		x = self.input_encode(x)
+  
+		# bert
+		out = self.bert(x)[0]
+		out = self.bert_pooler(out)
+		out = torch.sigmoid(self.classifier(out))
+		return out
+
+
 if __name__ == '__main__':
 	print('Testing model')
-	model = Sal_seq(backend='resnet',seq_len=14, mask=True, joint=True)
+	#model = Sal_seq(backend='resnet',seq_len=14, mask=True, joint=True)
+	model = SalBert(backend='resnet',seq_len=14)
 	if torch.cuda.is_available():
 		model = model.cuda()
 		print("Model on current device: ",torch.cuda.current_device())
@@ -168,7 +246,8 @@ if __name__ == '__main__':
 	if torch.cuda.is_available():
 		x = x.cuda()
 		fixation = fixation.cuda()	
+		duration = duration.cuda()
 	output = model(x,fixation, duration)
+
 	print('Output shape: ',output.shape)
 	print('Done')
-	
