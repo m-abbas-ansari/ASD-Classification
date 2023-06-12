@@ -196,6 +196,8 @@ class SalBert(nn.Module):
                                                         output_attentions=False,
                                                         output_hidden_states=False)
 		self.bert = model.bert.encoder
+		for param in self.bert.parameters(): param.requires_grad = True
+		
 		self.bert_pooler = model.bert.pooler
 		self.classifier = model.classifier
   
