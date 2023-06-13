@@ -192,6 +192,9 @@ class SalBert(nn.Module):
 			assert 0, 'Backend not implemented'
 
 		self.input_encode = nn.Linear(input_size,hidden_size,bias=True)
+		self.pos_emb = nn.Parameter(torch.Tensor(seq_len, hidden_size))
+		torch.nn.init.xavier_normal_(self.pos_emb)
+
 		model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1, 
                                                         output_attentions=False,
                                                         output_hidden_states=False)
@@ -217,11 +220,11 @@ class SalBert(nn.Module):
 		fixation = fixation.expand(fixation.size(0),fixation.size(1), feat) # [12, 2048, 14]
 		x = x.gather(1,fixation.to(torch.int64))
   
-		x = self.input_encode(x)
-  
+		x = torch.tanh(self.input_encode(x))
+		x = x + self.pos_emb.unsqueeze(0)
 		# bert
 		out = self.bert(x)[0]
-		out = self.bert_pooler(out)
+		out = torch.tanh(self.bert_pooler(out))
 		out = torch.sigmoid(self.classifier(out))
 		return out
 
@@ -244,6 +247,8 @@ class SalGPT(nn.Module):
 			assert 0, 'Backend not implemented'
 
 		self.input_encode = nn.Linear(input_size,hidden_size,bias=True)
+		self.pos_emb = nn.Parameter(torch.Tensor(seq_len, hidden_size))
+		torch.nn.init.xavier_normal_(self.pos_emb)
 		model = GPT2Model.from_pretrained("gpt2")
 
 		self.gpt = model.h
@@ -269,12 +274,14 @@ class SalGPT(nn.Module):
 		x = x.gather(1,fixation.to(torch.int64))
   
 		x = self.input_encode(x)
-  
+		x = torch.tanh(x)
+		x = x + self.pos_emb.unsqueeze(0) # Add position embeddings
 		# gpt
 		out = x
 		for m in self.gpt:
 			out = m(out)[0]
-		out = torch.tanh(self.gpt_pooler(out[:,-1]))
+		out = self.gpt_pooler(out[:,-1])
+		out = torch.tanh(out)
 		out = torch.sigmoid(self.classifier(out))
 		return out
 
@@ -282,7 +289,7 @@ class SalGPT(nn.Module):
 if __name__ == '__main__':
 	print('Testing model')
 	#model = Sal_seq(backend='resnet',seq_len=14, mask=True, joint=True)
-	model = SalGPT(backend='resnet',seq_len=14)
+	model = SalBert(backend='resnet',seq_len=14)
 	if torch.cuda.is_available():
 		model = model.cuda()
 		print("Model on current device: ",torch.cuda.current_device())
