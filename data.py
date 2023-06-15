@@ -7,6 +7,7 @@ from torchvision import transforms
 import cv2
 import torch
 import pandas as pd
+from transformers import BertTokenizerFast
 
 
 def read_dataset(anno_path, start_idx=1, end_idx=301):
@@ -111,7 +112,34 @@ class ASDDataset(data.Dataset):
 
     def __len__(self,):
         return len(self.fixation)
-    
+
+
+class CaptionDataset(data.Dataset):
+    def __init__(self, data, max_len):
+        tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased', padding_side='right',
+                                                      truncation_side='right')
+
+        self.fix_tokens = []
+        self.label = []
+        for img_id in data.keys():
+            for group_label, group in enumerate(['ctrl', 'asd']):
+                for per_caps in data[img_id][group]:
+                    while len(per_caps) < max_len:
+                        per_caps.append("")  # adding empty captions as padding for fix lens < max len
+                    tokens = tokenizer(per_caps[:max_len], max_length=128, padding='max_length',
+                                       truncation=True, return_tensors='pt')
+                    self.fix_tokens.append(tokens)
+                    self.label.append(group_label)
+
+    def __getitem__(self, index):
+        label = torch.FloatTensor([self.label[index]])
+        fix_tokens = self.fix_tokens[index]
+        return fix_tokens, label
+
+    def __len__(self, ):
+        return len(self.label)
+
+
 if __name__ == '__main__':
     anno_dir = '../../Datasets/Saliency4ASD/TrainingData'
     train_anno = read_dataset(anno_dir, 1, 241)
