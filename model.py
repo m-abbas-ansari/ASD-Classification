@@ -302,6 +302,41 @@ class CaptionModel(nn.Module):
 
         return output
 
+class VisualModel(nn.Module):
+    def __init__(self, seq_len, hidden_size=512):
+        super(VisualModel, self).__init__()
+        self.seq_len = seq_len
+        self.hidden_size = hidden_size
+
+        resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        input_size = 2048
+        self.cnn = nn.Sequential(*list(resnet.children())[:-1])
+
+        self.rnn = G_LSTM(input_size, hidden_size)
+        self.decoder = nn.Linear(hidden_size, 1, bias=True)
+
+    def init_hidden(self, batch):  # initializing hidden state as all zero
+        h = torch.zeros(batch, self.hidden_size)
+        c = torch.zeros(batch, self.hidden_size)
+        if torch.cuda.is_available():
+            h = h.cuda()
+            c = c.cuda()
+        return Variable(h), Variable(c)
+
+    def forward(self, crops, fix_tokens):
+        b, _, _, _ = crops[0].size()
+        crop_outs = []
+        for i in range(self.seq_len):
+            out = self.cnn(crops[i])
+            crop_outs.append(out.view(b, -1))
+
+        state = self.init_hidden(b)
+        for i in range(self.seq_len):
+            state = self.rnn(crop_outs[i], state)
+
+        output = torch.sigmoid(self.decoder(state[0]))
+
+        return output
 
 class VisualCaptionModel(nn.Module):
     def __init__(self, seq_len, hidden_size=512):
