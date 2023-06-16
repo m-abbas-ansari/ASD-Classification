@@ -115,15 +115,28 @@ class ASDDataset(data.Dataset):
 
 
 class CaptionDataset(data.Dataset):
-    def __init__(self, data, max_len):
+    def __init__(self, cap_data, max_len,
+                 visual=False, fix_data=None, crop_radius=85,
+                 im_dir="TrainingDataset/TrainingData/Images/",
+                 transform=None):
+        self.transform = transform
+        self.visual = visual
         tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased', padding_side='right',
                                                       truncation_side='right')
 
+        self.fix_crops = []
         self.fix_tokens = []
         self.label = []
-        for img_id in data.keys():
+        for img_id in cap_data.keys():
+            if visual:
+                img = np.array(Image.open(im_dir + f"{img_id}.png"))
+                h, w, _ = img.shape
+                pad = crop_radius
+                canvas = np.zeros((h + 2 * pad, w + 2 * pad, 3), dtype=img.dtype)
+                canvas[pad:-pad, pad:-pad, :] = img
+
             for group_label, group in enumerate(['ctrl', 'asd']):
-                for per_caps in data[img_id][group]:
+                for per_caps in cap_data[img_id][group]:
                     while len(per_caps) < max_len:
                         per_caps.append("")  # adding empty captions as padding for fix lens < max len
                     tokens = tokenizer(per_caps[:max_len], max_length=128, padding='max_length',
@@ -131,10 +144,26 @@ class CaptionDataset(data.Dataset):
                     self.fix_tokens.append(tokens)
                     self.label.append(group_label)
 
+                if visual:
+                    for fix_cords in fix_data[img_id][group]['fixation']:
+                        crops = []
+                        for fix in fix_cords:
+                            cropi = canvas[fix[0]: fix[0] + 2 * pad, fix[1]: fix[1] + 2 * pad, :]
+                            crops.append(cropi)
+                        while len(crops) < max_len:
+                            crops.append(np.zeros((pad * 2, pad * 2, 3), dtype=img.dtype))
+                        self.fix_crops.append(crops[:max_len])
+
     def __getitem__(self, index):
         label = torch.FloatTensor([self.label[index]])
         fix_tokens = self.fix_tokens[index]
-        return fix_tokens, label
+        if not self.visual:
+            return fix_tokens, label
+        else:
+            crops = self.fix_crops[index]
+            if self.transform is not None:
+                crops = [self.transform(c) for c in crops]
+            return crops, fix_tokens, label
 
     def __len__(self, ):
         return len(self.label)
