@@ -15,7 +15,7 @@ import json
 import wandb
 from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, f1_score
 
-from model import Sal_seq, SalBert, CaptionModel, VisualCaptionModel
+from model import Sal_seq, SalBert, CaptionModel, VisualCaptionModel, VisualModel
 from data import read_dataset, ASDDataset, CaptionDataset
 
 parser = argparse.ArgumentParser(description='Autism screening based on eye-tracking data')
@@ -23,10 +23,10 @@ parser.add_argument('--img_dir', type=str, default='TrainingDataset\TrainingData
 parser.add_argument('--anno_dir', type=str, default='TrainingDataset\TrainingData',
                     help='Directory to annotation files')
 parser.add_argument('--backend', type=str, default='resnet', help='Backend for visual encoder')
-parser.add_argument('--lr', type=float, default=1e-5, help='specify learning rate')
+parser.add_argument('--lr', type=float, default=1e-4, help='specify learning rate')
 parser.add_argument('--checkpoint_path', type=str, default='Checkpoints', help='Directory for saving checkpoints')
 parser.add_argument('--epoch', type=int, default=20, help='Specify maximum number of epoch')
-parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
+parser.add_argument('--batch_size', type=int, default=12, help='Batch size')
 parser.add_argument('--max_len', type=int, default=14, help='Maximum number of fixations for an image')
 parser.add_argument('--hidden_size', type=int, default=512, help='Hidden size for RNN/BERT')
 parser.add_argument('--clip', type=float, default=0, help='Gradient clipping')
@@ -42,7 +42,7 @@ parser.add_argument('--mask', type=bool, default=False, help='Time Masking')
 parser.add_argument('--joint', type=bool, default=False, help='Joint Time Embedding')
 
 # Model Related Arguments
-parser.add_argument('--model', type=str, default='VisualCaption', help='Model to use')
+parser.add_argument('--model', type=str, default='VisualOnly', help='Model to use')
 
 args = parser.parse_args()
 
@@ -253,7 +253,7 @@ def main():
     if args.model == 'CaptionOnly':
         train_set = CaptionDataset(train_capAnno, args.max_len)
         val_set = CaptionDataset(val_capAnno, args.max_len)
-    elif args.model == 'VisualCaption':
+    elif args.model in ['VisualCaption', 'VisualOnly']:
         train_set = CaptionDataset(train_capAnno, args.max_len, True, train_fixAnno, transform=transform_crop)
         val_set = CaptionDataset(val_capAnno, args.max_len, True, val_fixAnno, transform=transform_crop)
     else:
@@ -281,6 +281,9 @@ def main():
     elif args.model == 'VisualCaption':
         model = VisualCaptionModel(seq_len=args.max_len, hidden_size=args.hidden_size)
         print("Create VisualCaption Model")
+    elif args.model == 'VisualOnly':
+        model = VisualModel(seq_len=args.max_len, hidden_size=args.hidden_size)
+        print("Create VisualOnly Model")
     else:
         print("Model not recognized")
         return
