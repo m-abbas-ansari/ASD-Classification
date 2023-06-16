@@ -15,7 +15,7 @@ import json
 import wandb
 from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, f1_score
 
-from model import Sal_seq, SalBert, CaptionModel
+from model import Sal_seq, SalBert, CaptionModel, VisualCaptionModel
 from data import read_dataset, ASDDataset, CaptionDataset
 
 parser = argparse.ArgumentParser(description='Autism screening based on eye-tracking data')
@@ -26,7 +26,7 @@ parser.add_argument('--backend', type=str, default='resnet', help='Backend for v
 parser.add_argument('--lr', type=float, default=1e-5, help='specify learning rate')
 parser.add_argument('--checkpoint_path', type=str, default='Checkpoints', help='Directory for saving checkpoints')
 parser.add_argument('--epoch', type=int, default=20, help='Specify maximum number of epoch')
-parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
+parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
 parser.add_argument('--max_len', type=int, default=14, help='Maximum number of fixations for an image')
 parser.add_argument('--hidden_size', type=int, default=512, help='Hidden size for RNN/BERT')
 parser.add_argument('--clip', type=float, default=0, help='Gradient clipping')
@@ -42,7 +42,7 @@ parser.add_argument('--mask', type=bool, default=False, help='Time Masking')
 parser.add_argument('--joint', type=bool, default=False, help='Joint Time Embedding')
 
 # Model Related Arguments
-parser.add_argument('--model', type=str, default='CaptionOnly', help='Model to use')
+parser.add_argument('--model', type=str, default='VisualCaption', help='Model to use')
 
 args = parser.parse_args()
 
@@ -50,6 +50,8 @@ transform = transforms.Compose([transforms.Resize((args.img_height, args.img_wid
                                 transforms.ToTensor(),
                                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
+transform_crop = transforms.Compose([transforms.ToTensor(),
+                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
 def clip_gradient(optimizer, grad_clip):
     for group in optimizer.param_groups:
@@ -86,15 +88,24 @@ def train(model, trainloader, optimizer, criterion, iteration, arg):
                 label = label.cuda()
                 fixation = fixation.cuda()
                 duration = duration.cuda()
-            pred = model(img, fixation, duration) # Forward pass
+            pred = model(img, fixation, duration)  # Forward pass
 
-        else:
+        elif arg == 'CaptionOnly':
             fix_caps, label = data
             if torch.cuda.is_available():  # Move to GPU if available
                 label = label.cuda()
                 for k, v in fix_caps.items():
                     fix_caps[k] = v.cuda()
-            pred = model(fix_caps) # Forward pass
+            pred = model(fix_caps)  # Forward pass
+
+        else:  # VisualCaptionModel
+            fix_crops, fix_caps, label = data
+            if torch.cuda.is_available():  # Move to GPU if available
+                label = label.cuda()
+                for k, v in fix_caps.items():
+                    fix_caps[k] = v.cuda()
+                fix_crops = [c.cuda() for c in fix_crops]
+            pred = model(fix_crops, fix_caps)  # Forward pass
 
         # Compute loss
         loss = criterion(pred, label)
@@ -164,13 +175,24 @@ def validate(model, valloader, criterion, arg):
                     duration = duration.cuda()
                 pred = model(img, fixation, duration)  # Forward pass
 
-            else:
+            elif arg == 'CaptionOnly':
                 fix_caps, label = data
                 if torch.cuda.is_available():  # Move to GPU if available
                     label = label.cuda()
                     for k, v in fix_caps.items():
                         fix_caps[k] = v.cuda()
+
                 pred = model(fix_caps)  # Forward pass
+
+            else:  # VisualCaptionModel
+                fix_crops, fix_caps, label = data
+                if torch.cuda.is_available():  # Move to GPU if available
+                    label = label.cuda()
+                    for k, v in fix_caps.items():
+                        fix_caps[k] = v.cuda()
+                    fix_crops = [c.cuda() for c in fix_crops]
+
+                pred = model(fix_crops, fix_caps)  # Forward pass
 
             loss = criterion(pred, label)
             avg_loss = (avg_loss * np.maximum(0, i) + loss.data.cpu().numpy()) / (i + 1)
@@ -212,31 +234,31 @@ def main():
     # Load Data
     print("#" * 8)
     print("Loading data")
-    if args.model == 'CaptionOnly':
-        print("CaptionOnly dataset")
-        dat = {}
-        with open('caption_annotations.json', 'r') as f:
-            dat = json.load(f)
-        dat = {int(k): dat[k] for k in dat.keys()}
-        train_anno = {k: dat[k] for k in range(args.t_i, args.t_f)}
-        val_anno = {k: dat[k] for k in range(args.v_i, args.v_f)}
-    else:
-        print("Fixation Dataset")
-        train_anno = read_dataset(args.anno_dir, args.t_i, args.t_f)
-        val_anno = read_dataset(args.anno_dir, args.v_i, args.v_f)
+    dat = {}
+    with open('caption_annotations.json', 'r') as f:
+        dat = json.load(f)
+    dat = {int(k): dat[k] for k in dat.keys()}
+    train_capAnno = {k: dat[k] for k in range(args.t_i, args.t_f)}
+    val_capAnno = {k: dat[k] for k in range(args.v_i, args.v_f)}
 
-    print("Length of training data: ", len(train_anno))
-    print("Length of validation data: ", len(val_anno))
+    train_fixAnno = read_dataset(args.anno_dir, args.t_i, args.t_f)
+    val_fixAnno = read_dataset(args.anno_dir, args.v_i, args.v_f)
+
+    print("Length of training data: ", len(train_fixAnno))
+    print("Length of validation data: ", len(val_fixAnno))
 
     # Data Loaders
     print("#" * 8)
     print("Creating data loaders")
     if args.model == 'CaptionOnly':
-        train_set = CaptionDataset(train_anno, args.max_len)
-        val_set = CaptionDataset(val_anno, args.max_len)
+        train_set = CaptionDataset(train_capAnno, args.max_len)
+        val_set = CaptionDataset(val_capAnno, args.max_len)
+    elif args.model == 'VisualCaption':
+        train_set = CaptionDataset(train_capAnno, args.max_len, True, train_fixAnno, transform=transform_crop)
+        val_set = CaptionDataset(val_capAnno, args.max_len, True, val_fixAnno, transform=transform_crop)
     else:
-        train_set = ASDDataset(args.img_dir, train_anno, args.max_len, args.img_height, args.img_width, transform)
-        val_set = ASDDataset(args.img_dir, val_anno, args.max_len, args.img_height, args.img_width, transform)
+        train_set = ASDDataset(args.img_dir, train_fixAnno, args.max_len, args.img_height, args.img_width, transform)
+        val_set = ASDDataset(args.img_dir, val_fixAnno, args.max_len, args.img_height, args.img_width, transform)
 
     print("Length of training set: ", len(train_set))
     print("Length of validation set: ", len(val_set))
@@ -256,12 +278,15 @@ def main():
     elif args.model == 'CaptionOnly':
         model = CaptionModel(seq_len=args.max_len, hidden_size=args.hidden_size)
         print("Created CaptionOnly Model")
+    elif args.model == 'VisualCaption':
+        model = VisualCaptionModel(seq_len=args.max_len, hidden_size=args.hidden_size)
+        print("Create VisualCaption Model")
     else:
         print("Model not recognized")
         return
 
-    total_params = sum([p.numel() for p in model.parameters()])
-    print(f"Total parameters in model: {total_params:,}")
+    total_params = sum([p.numel() for p in filter(lambda p: p.requires_grad, model.parameters())])
+    print(f"Total trainable parameters in model: {total_params:,}")
 
     if args.mask or args.joint:
         print("Mask: ", args.mask)
@@ -274,8 +299,8 @@ def main():
 
     # Optimizer
     print("Creating optimizer")
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
-    # optimizer = torch.optim.SGD(model.parameters(),lr=args.lr)
+    optimizer = torch.optim.Adam([{'params': filter(lambda p: p.requires_grad, model.parameters())}], lr=args.lr,
+                                 weight_decay=1e-5)
 
     # Loss
     print("Creating loss function")
