@@ -217,7 +217,7 @@ class CaptionModel(nn.Module):
         self.encoder = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1,
                                                                      output_attentions=False,
                                                                      output_hidden_states=False).bert
-        for param in self.encoder.parameters(): param.requires_grad = True
+        for param in self.encoder.parameters(): param.requires_grad = False
 
         self.rnn = G_LSTM(768, hidden_size)
         self.decoder = nn.Linear(hidden_size, 1, bias=True)
@@ -239,6 +239,62 @@ class CaptionModel(nn.Module):
         state = self.init_hidden(outs[0].size()[0])
         for i in range(self.seq_len):
             state = self.rnn(outs[i], state)
+
+        output = torch.sigmoid(self.decoder(state[0]))
+
+        return output
+
+
+class VisualCaptionModel(nn.Module):
+    def __init__(self, seq_len, hidden_size=512):
+        super(VisualCaptionModel, self).__init__()
+        self.seq_len = seq_len
+        self.hidden_size = hidden_size
+
+        resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        input_size = 2048
+        self.cnn = nn.Sequential(*list(resnet.children())[:-1])
+        self.project = nn.Linear(input_size, 768)
+        self.joint_embedding = nn.Linear(768, 768, bias=False)
+        self.encoder = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=1,
+                                                                     output_attentions=False,
+                                                                     output_hidden_states=False).bert
+        for param in self.encoder.parameters(): param.requires_grad = True
+
+        self.rnn = G_LSTM(768, hidden_size)
+        self.decoder = nn.Linear(hidden_size, 1, bias=True)
+
+    def init_hidden(self, batch):  # initializing hidden state as all zero
+        h = torch.zeros(batch, self.hidden_size)
+        c = torch.zeros(batch, self.hidden_size)
+        if torch.cuda.is_available():
+            h = h.cuda()
+            c = c.cuda()
+        return Variable(h), Variable(c)
+
+    def forward(self, crops, fix_tokens):
+        cap_outs = []
+        for i in range(self.seq_len):
+            out = self.encoder(**{k: fix_tokens[k][:, i] for k in fix_tokens.keys()}).pooler_output
+            cap_outs.append(out)
+
+        b, _, _, _ = crops[0].size()
+        crop_outs = []
+        for i in range(self.seq_len):
+            out = self.cnn(crops[i])
+            crop_outs.append(out.view(b, -1))
+
+        state = self.init_hidden(b)
+        for i in range(self.seq_len):
+            cap_i = cap_outs[i]
+            crop_i = crop_outs[i]
+
+            # Create a joint embdding
+            crop_i = torch.softmax(self.project(crop_i), dim=1)
+            crop_i = self.joint_embedding(crop_i)
+            emb_i = (cap_i + crop_i) / 2.0
+
+            state = self.rnn(emb_i, state)
 
         output = torch.sigmoid(self.decoder(state[0]))
 
