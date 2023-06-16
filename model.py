@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision import models
-from transformers import BertForSequenceClassification
+from transformers import BertForSequenceClassification, GPT2Model
 import os
 import json
 import torch.utils.data as data
@@ -206,6 +206,64 @@ class SalBert(nn.Module):
         out = self.bert_pooler(out)
         out = torch.sigmoid(self.classifier(out))
         return out
+
+
+class SalGPT(nn.Module):
+	def __init__(self,backend, seq_len, hidden_size=768):
+		super(SalGPT,self).__init__()
+		self.seq_len = seq_len
+		self.hidden_size = hidden_size
+  
+		# defining backend
+		if backend == 'resnet':
+			resnet = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+			self.init_resnet(resnet)
+			input_size = 2048
+		elif backend == 'vgg':
+			vgg = models.vgg19(pretrained=True)
+			self.init_vgg(vgg)
+			input_size = 512
+		else:
+			assert 0, 'Backend not implemented'
+
+		self.input_encode = nn.Linear(input_size,hidden_size,bias=True)
+		self.pos_emb = nn.Parameter(torch.Tensor(seq_len, hidden_size))
+		torch.nn.init.xavier_normal_(self.pos_emb)
+		model = GPT2Model.from_pretrained("gpt2")
+
+		self.gpt = model.h
+		for param in self.gpt.parameters(): param.requires_grad = True
+		
+		self.gpt_pooler = nn.Linear(hidden_size, hidden_size)
+		self.classifier = nn.Linear(hidden_size, 1)
+  
+	def init_resnet(self,resnet):
+		self.backend = nn.Sequential(*list(resnet.children())[:-2])
+
+	def init_vgg(self,vgg):
+		self.backend = nn.Sequential(*list(vgg.features.children())[:-2])
+
+	def forward(self,x,fixation, duration):
+		x = self.backend(x)
+		batch, feat, h, w = x.size()
+		x = x.view(batch,feat,-1)
+		x = torch.transpose(x, 1,2)
+  
+		fixation = fixation.unsqueeze(dim=2) # [12,14, 1]
+		fixation = fixation.expand(fixation.size(0),fixation.size(1), feat) # [12, 2048, 14]
+		x = x.gather(1,fixation.to(torch.int64))
+  
+		x = self.input_encode(x)
+		x = torch.tanh(x)
+		x = x + self.pos_emb.unsqueeze(0) # Add position embeddings
+		# gpt
+		out = x
+		for m in self.gpt:
+			out = m(out)[0]
+		out = self.gpt_pooler(out[:,-1])
+		out = torch.tanh(out)
+		out = torch.sigmoid(self.classifier(out))
+		return out
 
 
 class CaptionModel(nn.Module):
