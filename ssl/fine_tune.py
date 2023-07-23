@@ -129,7 +129,10 @@ def train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder):
           
     avg_loss = (token_losses) / len(trainloader)
     acc = accuracy_score(targets, preds)
-    auc = roc_auc_score(targets, preds)
+    try:
+        auc = roc_auc_score(targets, preds)
+    except:
+        auc = 0
     precision = precision_score(targets, preds)
     recall = recall_score(targets, preds)
     f1 = f1_score(targets, preds)
@@ -190,7 +193,10 @@ def validate(model, valloader, loss_fn_token, decoder):
           
     avg_loss = (token_losses) / len(valloader)
     acc = accuracy_score(targets, preds)
-    auc = roc_auc_score(targets, preds)
+    try:
+        auc = roc_auc_score(targets, preds)
+    except:
+        auc = 0
     precision = precision_score(targets, preds)
     recall = recall_score(targets, preds)
     f1 = f1_score(targets, preds)
