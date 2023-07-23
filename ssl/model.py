@@ -5,9 +5,9 @@ from torch.nn import functional as F
 from torchvision import models
 from torch.autograd import Variable
 from torch import optim
-from mask2former.modeling.transformer_decoder.position_encoding import PositionEmbeddingSine
-from mask2former.modeling.transformer_decoder.mask2former_transformer_decoder import \
-    SelfAttentionLayer, CrossAttentionLayer, FFNLayer
+# from mask2former.modeling.transformer_decoder.position_encoding import PositionEmbeddingSine
+# from mask2former.modeling.transformer_decoder.mask2former_transformer_decoder import \
+#     SelfAttentionLayer, CrossAttentionLayer, FFNLayer
     
 class LARS(optim.Optimizer):
     def __init__(self, params, lr, weight_decay=0, momentum=0.9, eta=0.001,
@@ -49,7 +49,7 @@ class LARS(optim.Optimizer):
                 mu.mul_(g['momentum']).add_(dp)
 
                 p.add_(mu, alpha=-g['lr'])
-                
+'''                              
 class Decoder(nn.Module):
     def __init__(
         self,
@@ -126,7 +126,7 @@ class HATFormer(nn.Module):
         self.pixel_decoder = torch.load("pixel_decoder.pt").to(device)
         for param in self.pixel_decoder.parameters(): param.requires_grad = False
         
-        self.pos_embs = PositionEmbeddingSine(hidden_dim // 2, normalize=True)(torch.rand((1, 3, 320, 512))).to(device).flatten(2)
+        # self.pos_embs = PositionEmbeddingSine(hidden_dim // 2, normalize=True)(torch.rand((1, 3, 320, 512))).to(device).flatten(2)
         self.per_pos_embs = self.get_per_pos_embs(self.pos_embs, (320, 512), (10, 16))
         self.order_emb = nn.Embedding(num_fix, hidden_dim).to(device)
         self.scale_emb = nn.Embedding(2, hidden_dim).to(device)
@@ -483,7 +483,7 @@ class HATClassifier(nn.Module):
         out = F.relu(self.project(out))
         
         return self.softmax(self.token_predictor(out)) 
-
+'''
 class G_LSTM(nn.Module):
     """ 
     LSTM implementation proposed by A. Graves (2013),
@@ -575,7 +575,7 @@ class Sal_seq(nn.Module):
         return lengths
     
     def get_fix_tokens(self, x, fixs):
-        H, W = self.im_size
+        H,W = self.im_size
         _, feat, h, w = x.size()
 
         # We get fixation index in downscaled feature map for given fix coords
@@ -604,7 +604,7 @@ class Sal_seq(nn.Module):
         return x
 
     def forward(self, img, fixation, padding_mask):
-        valid_len = self.process_lengths(padding_mask[:,-20:])  # computing valid fixation lengths
+        valid_len = self.process_lengths(padding_mask[:,-self.seq_len:])  # computing valid fixation lengths
         x = self.backend(img)
         batch, feat, h, w = x.size()
         # recurrent loop
@@ -635,6 +635,8 @@ class SSL(nn.Module):
     def __init__(self,
                  method="barlow-twins",
                  visual_backend="resnet50",
+                 im_size=(320, 512),
+                 seq_len=20,
                  batch_size=32,
                  hidden_dim=512,
                  device="cuda"):
@@ -642,7 +644,7 @@ class SSL(nn.Module):
         super().__init__()        
         self.method = method
         self.batch_size = batch_size
-        self.backbone = Sal_seq(backend=visual_backend, hidden_size=hidden_dim, device=device)
+        self.backbone = Sal_seq(backend=visual_backend, im_size=im_size, seq_len=seq_len, hidden_size=hidden_dim, device=device)
         self.lambd = 0.0051
         self.num_features = hidden_dim * 4
         # projector
