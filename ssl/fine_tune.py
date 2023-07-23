@@ -13,22 +13,25 @@ import json
 import wandb
 from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, f1_score
 
-from model import HATClassifier, Sal_seq
-from data import read_ASD_dataset, ASDHATDataset
+from model import SSL
+from data import read_ASD_dataset, ASDHATDataset as Dataset, loo_split, image_selection
 
-IMG_HEIGHT = 320
-IMG_WIDTH = 512
-HIDDEN_DIM = 256
+IMG_HEIGHT = 600
+IMG_WIDTH = 800
+HIDDEN_DIM = 512
 LR = 1e-4
-ANNO_DIR = "../../Data/Saliency4ASD/TrainingData"
-IMG_DIR = "../../Data/Saliency4ASD/TrainingData/Images"
+ANNO_DIR = "../TrainingDataset/TrainingData"
+IMG_DIR = "../TrainingDataset/TrainingData/Images"
 SEED = 42
 VAL_RATIO = 0.2
-NUM_FIX = 20
-BATCH_SIZE = 32
-EPOCHS = 20
-SLOW_LR = 1e-5
-FAST_LR = 1e-3
+FOLDS = 28
+NUM_FIX = 14
+BATCH_SIZE = 12
+SELECT_NUMBER=100
+EPOCHS = 10
+SLOW_LR = 1e-4
+FAST_LR = 1e-4
+CLIP = 10
 
 # Set Seeds for reproducibility
 torch.manual_seed(SEED)
@@ -103,6 +106,10 @@ def train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder):
             loss.backward()
             token_losses += loss.item()
 
+            if CLIP != -1:
+                clip_gradient(SlowOpt, CLIP)
+                clip_gradient(FastOpt, CLIP)
+            
             # Update weights
             SlowOpt.step()
             FastOpt.step()
@@ -202,84 +209,87 @@ def validate(model, valloader, loss_fn_token, decoder):
     return avg_loss
 
 
-def main(project, method, run):
+def main(project, method="base", run="scratch"):
     print("#" * 8)
     print("Wandb setup")
     name_of_project = project
-    name_of_run = "{}-{}".format(method, run)
-    print("Finetuning\nProject: {} Run: {}".format(name_of_project, name_of_run))
+    # name_of_run = "{}-{}".format(method, run)
+    # print("Finetuning\nProject: {} Run: {}".format(name_of_project, name_of_run))
     # name_of_project = "ssl"
     # name_of_run = "fast-af-boi"
-    wandb.init(project=name_of_project, name=name_of_run)
 
     # Load Data
     print("#" * 8)
     print("Loading data")
     anno = read_ASD_dataset(ANNO_DIR)
-    dataset = ASDHATDataset(IMG_DIR, anno, transform=transform)
-    generator = torch.Generator().manual_seed(SEED)
-    train_set, val_set = torch.utils.data.random_split(dataset, 
-                                                       [1 - VAL_RATIO, VAL_RATIO], 
-                                                       generator=generator)
-  
-
-    print("Length of training data: ", len(train_set))
-    print("Length of validation data: ", len(val_set))
     
-    # Data Loaders
-    print("#" * 8)
-    print("Creating data loaders")
-    trainloader = torch.utils.data.DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=8)
-    valloader = torch.utils.data.DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=8)
-
-
-    # Model
-    print("Creating model")
-    model = torch.load(f"Checkpoints/ssl/{name_of_run}/epoch-19.pt")
-    # model = BarlowTwins(visual_backend="resnet18", hidden_dim=256, batch_size=BATCH_SIZE)
-    total_params = sum([p.numel() for p in filter(lambda p: p.requires_grad, model.parameters())])
-    print(f"Total trainable parameters in model: {total_params:,}")
-
-    if torch.cuda.is_available():
-        model = model.cuda()
-        print("Model on current device: ", torch.cuda.current_device())
-    else:
-        print('CUDA is not available. Model on CPU')
-
-    # decoder = nn.Linear(HIDDEN_DIM, 2).to("cuda")
-    decoder = nn.Sequential(*[nn.Linear(HIDDEN_DIM, HIDDEN_DIM), 
-                            nn.ReLU(inplace=True),
-                            nn.Linear(HIDDEN_DIM, HIDDEN_DIM),
-                            nn.ReLU(inplace=True),
-                            nn.Linear(HIDDEN_DIM, 2)]).to("cuda")
+    for fold in range(FOLDS):
+        name_of_run = "{}-subj-{}".format(method, fold+1)
+        wandb.init(project=name_of_project, name=name_of_run)
+        train_data, val_data = loo_split(anno,fold)
+        valid_id = image_selection(train_data, SELECT_NUMBER)
+        
+        train_set = Dataset(IMG_DIR,train_data,valid_id,NUM_FIX,IMG_HEIGHT,IMG_WIDTH,transform)
+        val_set = Dataset(IMG_DIR,val_data,valid_id,NUM_FIX,IMG_HEIGHT,IMG_WIDTH,transform)
     
-    # Optimizer
-    print("Creating optimizer")
-    hat_params = list(model.parameters()) 
-    SlowOpt = torch.optim.AdamW(hat_params, lr=SLOW_LR, weight_decay=1e-5)
-    # SlowOpt = torch.optim.AdamW([{'params': filter(lambda p: p.requires_grad, model.parameters())}], lr=SLOW_LR,
-    #                              weight_decay=1e-5)
-    tail_params = list(decoder.parameters())
-    FastOpt = torch.optim.AdamW(tail_params, lr=FAST_LR, weight_decay=1e-5)
 
-    # Loss
-    print("Creating loss function")
-    loss_fn_token = torch.nn.NLLLoss()
+        print("Length of training data: ", len(train_set))
+        print("Length of validation data: ", len(val_set))
+        
+        # Data Loaders
+        print("#" * 8)
+        print("Creating data loaders")
+        trainloader = torch.utils.data.DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
+        valloader = torch.utils.data.DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False)
 
-    # Training Loop
-    print("#" * 8)
-    print("Training loop")
-    os.makedirs("Checkpoints/Finetune", exist_ok=True)
-    #os.makedirs(f"{args.checkpoint_path}\{name_of_project}\{name_of_run}", exist_ok=True)
-    best_loss = 1e+10
-    for epoch in range(EPOCHS):
-        print("\nEpoch: ", epoch + 1)
-        train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder)
-        val_loss = validate(model, valloader, loss_fn_token, decoder)
-        if val_loss < best_loss:
-            torch.save(model, f"Checkpoints/Finetune/{name_of_project}-{name_of_run}.pt")
-            best_loss = val_loss
+
+        # Model
+        print("Creating model")
+        # model = torch.load(f"Checkpoints/ssl/{name_of_run}/epoch-19.pt")
+        model = SSL(visual_backend="resnet50", im_size=(IMG_HEIGHT, IMG_WIDTH), seq_len=NUM_FIX, hidden_dim=HIDDEN_DIM, batch_size=BATCH_SIZE)
+        total_params = sum([p.numel() for p in filter(lambda p: p.requires_grad, model.parameters())])
+        print(f"Total trainable parameters in model: {total_params:,}")
+
+        if torch.cuda.is_available():
+            model = model.cuda()
+            print("Model on current device: ", torch.cuda.current_device())
+        else:
+            print('CUDA is not available. Model on CPU')
+
+        decoder = nn.Linear(HIDDEN_DIM, 2).to("cuda")
+        # decoder = nn.Sequential(*[nn.Linear(HIDDEN_DIM, HIDDEN_DIM), 
+        #                         nn.ReLU(inplace=True),
+        #                         nn.Linear(HIDDEN_DIM, HIDDEN_DIM),
+        #                         nn.ReLU(inplace=True),
+        #                         nn.Linear(HIDDEN_DIM, 2)]).to("cuda")
+        
+        # Optimizer
+        print("Creating optimizer")
+        hat_params = list(model.parameters()) 
+        SlowOpt = torch.optim.Adam(hat_params, lr=SLOW_LR, weight_decay=1e-5)
+        # SlowOpt = torch.optim.AdamW([{'params': filter(lambda p: p.requires_grad, model.parameters())}], lr=SLOW_LR,
+        #                              weight_decay=1e-5)
+        tail_params = list(decoder.parameters())
+        FastOpt = torch.optim.Adam(tail_params, lr=FAST_LR, weight_decay=1e-5)
+
+        # Loss
+        print("Creating loss function")
+        loss_fn_token = torch.nn.NLLLoss()
+
+        # Training Loop
+        print("#" * 8)
+        print('Start %d-fold validation for fold %d' %(FOLDS,fold+1))
+        os.makedirs("Checkpoints/Finetune", exist_ok=True)
+        #os.makedirs(f"{args.checkpoint_path}\{name_of_project}\{name_of_run}", exist_ok=True)
+        best_loss = 1e+10
+        for epoch in range(EPOCHS):
+            print("\nEpoch: ", epoch + 1)
+            train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder)
+            val_loss = validate(model, valloader, loss_fn_token, decoder)
+            if val_loss < best_loss:
+                torch.save(model, f"Checkpoints/Finetune/{name_of_project}-{name_of_run}.pt")
+                best_loss = val_loss
             
-    wandb.finish()
+        wandb.finish()
 
-# main("asd-ssl", "lstm-base")
+main("asd-loo")
