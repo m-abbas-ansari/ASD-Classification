@@ -11,7 +11,7 @@ from data import CaptionDataset
 
 
 class G_LSTM(nn.Module):
-    """
+    """ 
     LSTM implementation proposed by A. Graves (2013),
     it has more parameters compared to original LSTM
     """

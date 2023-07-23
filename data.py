@@ -104,7 +104,7 @@ class ASDDataset(data.Dataset):
 
     def __getitem__(self,index):
         img = Image.open(self.img_id[index])
-        if self.transform is not None:
+        if self.transform is not None: 
             img = self.transform(img)
         label = torch.FloatTensor([self.label[index]])
         fixation, duration = self.get_fix_dur(index)
