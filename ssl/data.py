@@ -422,7 +422,7 @@ class ASDHATDataset(data.Dataset):
             
         fix = self.fixation[index]
         dur = self.duration[index]
-        label = torch.LongTensor([self.label[index]])
+        label = torch.FloatTensor([self.label[index]])
         num_fix = len(fix)
         padding_mask = torch.tensor([0 for _ in range(160 + self.max_len)]).to(torch.bool)
         
