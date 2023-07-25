@@ -11,25 +11,26 @@ from time import gmtime, strftime
 from tqdm import tqdm
 import json
 import wandb
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, roc_auc_score, confusion_matrix
 
-from model import SSL
+from model import BarlowTwins as SSL
 from data import read_ASD_dataset, ASDHATDataset as Dataset, loo_split, image_selection
 
-IMG_HEIGHT = 600
-IMG_WIDTH = 800
-HIDDEN_DIM = 512
+IMG_HEIGHT = 320
+IMG_WIDTH = 512
+HIDDEN_DIM = 256
 LR = 1e-4
-ANNO_DIR = "../TrainingDataset/TrainingData"
-IMG_DIR = "../TrainingDataset/TrainingData/Images"
+ANNO_DIR = "../../Data/Saliency4ASD/TrainingData"
+IMG_DIR = "../../Data/Saliency4ASD/TrainingData/Images"
 SEED = 42
 VAL_RATIO = 0.2
 FOLDS = 28
-NUM_FIX = 14
-BATCH_SIZE = 12
+NUM_FIX = 20
+BATCH_SIZE = 32
+BACKEND="resnet18"
 SELECT_NUMBER=100
 EPOCHS = 10
-SLOW_LR = 1e-4
+SLOW_LR = 1e-5
 FAST_LR = 1e-4
 CLIP = 10
 
@@ -42,9 +43,6 @@ transform = transforms.Compose([transforms.Resize((IMG_HEIGHT, IMG_WIDTH)),
                                 transforms.ToTensor(),
                                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
-
-# decoder_p = nn.Linear(HIDDEN_DIM * 4, 2).to("cuda")
-softmax = nn.LogSoftmax(dim=-1).to("cuda")
 
 def clip_gradient(optimizer, grad_clip):
     for group in optimizer.param_groups:
@@ -75,16 +73,14 @@ def get_last_fix(x, lengths):
     
     return x
 
-def train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder):
+def train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder, fold, iteration):
     token_losses = 0
-    preds = []
-    targets = []
     
     model.train()
     decoder.train()
     with tqdm(trainloader, unit='batch') as tepoch:
         minibatch = 0
-        for data in tepoch:
+        for i, data in enumerate(tepoch):
             SlowOpt.zero_grad()
             FastOpt.zero_grad()
             
@@ -99,9 +95,9 @@ def train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder):
             # Forward pass               
             out = model.backbone(imgs, fixs, pad_mask)
             #out  = model.projector(out) 
-            out_token = softmax(decoder(out)) 
+            out_token = torch.sigmoid(decoder(out)) 
 
-            loss = loss_fn_token(out_token, labels)
+            loss = F.binary_cross_entropy(out_token.squeeze(1),labels)
           
             loss.backward()
             token_losses += loss.item()
@@ -113,47 +109,20 @@ def train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder):
             # Update weights
             SlowOpt.step()
             FastOpt.step()
-            
-            preds.append(torch.argmax(out_token, axis=-1).detach().cpu().numpy())
-            targets.append(labels.detach().cpu().numpy())
-
           
             # Log loss on wandb
             minibatch += 1.
             tepoch.set_postfix(token_loss=token_losses/minibatch)
-            wandb.log({'token loss iter': token_losses/minibatch})
+            if i%25 == 0:
+                wandb.log({'training loss_fold_'+str(fold+1):token_losses/minibatch})
+            iteration += 1
 
-    # Compute metrics
-    preds = np.concatenate(preds)
-    targets = np.concatenate(targets)
-          
-    avg_loss = (token_losses) / len(trainloader)
-    acc = accuracy_score(targets, preds)
-    try:
-        auc = roc_auc_score(targets, preds)
-    except:
-        auc = 0
-    precision = precision_score(targets, preds)
-    recall = recall_score(targets, preds)
-    f1 = f1_score(targets, preds)
-          
-    # Print metrics in one line         
-    print(
-        "Train: Acc: {:.4f}, AUC: {:.4f}, Precision: {:.4f}, Recall: {:.4f}, F1: {:.4f}, Loss: {:.4f}".format(acc, auc,
-                                                                                                              precision,
-                                                                                                              recall,
-                                                                                                              f1,
-                                                                                                              avg_loss))
-    
-    wandb.log({'train acc': acc, 'train auc': auc, 'train precision': precision, 'train recall': recall, 'train f1': f1,
-               'train loss': avg_loss})
+    return iteration
 
 
 # Validation Function
-def validate(model, valloader, loss_fn_token, decoder):
-    token_losses = 0
-    preds = []
-    targets = []
+def validate(model, valloader, loss_fn_token, decoder, fold, epoch):
+    avg_pred = []
     
     model.eval()
     decoder.eval()
@@ -173,53 +142,28 @@ def validate(model, valloader, loss_fn_token, decoder):
                 # Forward pass               
                 out = model.backbone(imgs, fixs, pad_mask)
                 #out  = model.projector(out) 
-                out_token = softmax(decoder(out))  
+                out_token = torch.sigmoid(decoder(out))  
 
-                loss = loss_fn_token(out_token, labels)
-            
-                token_losses += loss.item()
+                target = labels.data.cpu().numpy()[0]
+                avg_pred.extend(out_token.data.cpu().numpy())
 
-                preds.append(torch.argmax(out_token, axis=-1).detach().cpu().numpy())
-                targets.append(labels.detach().cpu().numpy())
-
-            
-                # Log loss on wandb
-                minibatch += 1.
-                vepoch.set_postfix(token_loss=token_losses/minibatch)
-
-    # Compute metrics
-    preds = np.concatenate(preds)
-    targets = np.concatenate(targets)
-          
-    avg_loss = (token_losses) / len(valloader)
-    acc = accuracy_score(targets, preds)
-    try:
-        auc = roc_auc_score(targets, preds)
-    except:
-        auc = 0
-    precision = precision_score(targets, preds)
-    recall = recall_score(targets, preds)
-    f1 = f1_score(targets, preds)
-          
-    # Print metrics in one line         
-    print(
-        "val: Acc: {:.4f}, AUC: {:.4f}, Precision: {:.4f}, Recall: {:.4f}, F1: {:.4f}, Loss: {:.4f}".format(acc, auc,
-                                                                                                              precision,
-                                                                                                              recall,
-                                                                                                              f1,
-                                                                                                              avg_loss))
+        # average voting
+        avg_pred = np.mean(avg_pred)
+        
+        if not target:
+            avg_pred = 1-avg_pred
+        label = 'asd' if target else 'ctrl'
     
-    wandb.log({'val acc': acc, 'val auc': auc, 'val precision': precision, 'val recall': recall, 'val f1': f1,
-               'val loss': avg_loss})
-    
-    return avg_loss
-
+        wandb.log({'validation_acc_subject_' + label + '_' + str(fold+1): avg_pred})
+            
+    return avg_pred
 
 def main(project, method="base", run="scratch"):
     print("#" * 8)
     print("Wandb setup")
     name_of_project = project
-    # name_of_run = "{}-{}".format(method, run)
+    name_of_run = "{}-{}".format(method, run)
+    wandb.init(project=name_of_project, name=name_of_run)
     # print("Finetuning\nProject: {} Run: {}".format(name_of_project, name_of_run))
     # name_of_project = "ssl"
     # name_of_run = "fast-af-boi"
@@ -228,10 +172,11 @@ def main(project, method="base", run="scratch"):
     print("#" * 8)
     print("Loading data")
     anno = read_ASD_dataset(ANNO_DIR)
+    preds = []
+    targets = []
     
     for fold in range(FOLDS):
-        name_of_run = "{}-subj-{}".format(method, fold+1)
-        wandb.init(project=name_of_project, name=name_of_run)
+        
         train_data, val_data = loo_split(anno,fold)
         valid_id = image_selection(train_data, SELECT_NUMBER)
         
@@ -251,8 +196,8 @@ def main(project, method="base", run="scratch"):
 
         # Model
         print("Creating model")
-        # model = torch.load(f"Checkpoints/ssl/{name_of_run}/epoch-19.pt")
-        model = SSL(visual_backend="resnet50", im_size=(IMG_HEIGHT, IMG_WIDTH), seq_len=NUM_FIX, hidden_dim=HIDDEN_DIM, batch_size=BATCH_SIZE)
+        model = torch.load(f"Checkpoints/ssl/lstm-BT-LARS/epoch-19.pt")
+        # model = SSL(visual_backend=BACKEND, im_size=(IMG_HEIGHT, IMG_WIDTH), seq_len=NUM_FIX, hidden_dim=HIDDEN_DIM, batch_size=BATCH_SIZE)
         total_params = sum([p.numel() for p in filter(lambda p: p.requires_grad, model.parameters())])
         print(f"Total trainable parameters in model: {total_params:,}")
 
@@ -262,7 +207,7 @@ def main(project, method="base", run="scratch"):
         else:
             print('CUDA is not available. Model on CPU')
 
-        decoder = nn.Linear(HIDDEN_DIM, 2).to("cuda")
+        decoder = nn.Linear(HIDDEN_DIM, 1).to("cuda")
         # decoder = nn.Sequential(*[nn.Linear(HIDDEN_DIM, HIDDEN_DIM), 
         #                         nn.ReLU(inplace=True),
         #                         nn.Linear(HIDDEN_DIM, HIDDEN_DIM),
@@ -271,8 +216,8 @@ def main(project, method="base", run="scratch"):
         
         # Optimizer
         print("Creating optimizer")
-        hat_params = list(model.parameters()) 
-        SlowOpt = torch.optim.Adam(hat_params, lr=SLOW_LR, weight_decay=1e-5)
+        hat_params = list(model.backbone.parameters()) 
+        SlowOpt = torch.optim.AdamW(hat_params, lr=SLOW_LR, weight_decay=1e-5)
         # SlowOpt = torch.optim.AdamW([{'params': filter(lambda p: p.requires_grad, model.parameters())}], lr=SLOW_LR,
         #                              weight_decay=1e-5)
         tail_params = list(decoder.parameters())
@@ -287,15 +232,63 @@ def main(project, method="base", run="scratch"):
         print('Start %d-fold validation for fold %d' %(FOLDS,fold+1))
         os.makedirs("Checkpoints/Finetune", exist_ok=True)
         #os.makedirs(f"{args.checkpoint_path}\{name_of_project}\{name_of_run}", exist_ok=True)
-        best_loss = 1e+10
+        best_acc = 0
+        iteration = 0
         for epoch in range(EPOCHS):
             print("\nEpoch: ", epoch + 1)
-            train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder)
-            val_loss = validate(model, valloader, loss_fn_token, decoder)
-            if val_loss < best_loss:
-                torch.save(model, f"Checkpoints/Finetune/{name_of_project}-{name_of_run}.pt")
-                best_loss = val_loss
-            
-        wandb.finish()
+            adjust_lr(SlowOpt, epoch)
+            adjust_lr(FastOpt, epoch)
+            iteration = train(model, trainloader, SlowOpt, FastOpt, loss_fn_token, decoder, fold, iteration)
+            acc = validate(model, valloader, loss_fn_token, decoder, fold, epoch)
+            if acc > best_acc:
+                full_model = nn.Sequential(*[model.backbone, decoder])
+                torch.save(full_model, f"Checkpoints/Finetune/{name_of_project}-{name_of_run}-{fold+1}.pt")
+                best_acc = acc
+          
+        del model 
+        
+        # Get metrics for best model on current fold
+        m = torch.load(f"Checkpoints/Finetune/{name_of_project}-{name_of_run}-{fold+1}.pt")
+        all_scores = []
+        with torch.no_grad(): 
+            for data in valloader:
+                imgs, fixs, _, pad_mask, labels = data
 
-main("asd-loo")
+                if torch.cuda.is_available():  # Move to GPU if available
+                    fixs = fixs.cuda()
+                    pad_mask = pad_mask.cuda()
+                    labels = labels.cuda().squeeze(1)
+                    imgs = imgs.cuda()
+
+                pred = torch.sigmoid(m[1](m[0](imgs, fixs, pad_mask)))
+                all_scores.extend(pred.squeeze(1).data.cpu().numpy())
+        preds.append(np.mean(all_scores))
+        targets.append(labels[0].item())
+    
+    
+    print("#"*20)
+    print("Performing final evaluation")
+
+    pred_scores = preds
+    preds = (np.array(preds) > 0.5).astype(float)
+    
+    auc = roc_auc_score(targets, pred_scores)
+    acc = accuracy_score(targets, preds)         
+    cm = confusion_matrix(targets, preds)
+    specificity = cm[0, 0] / sum(cm[0,:]) # TN / (TN + FP)
+    sensitivty = cm[1, 1] / sum(cm[1, :]) # TP / (TP + FN)
+    
+    print(
+        "Acc: {:.4f}, Sens: {:.4f}, Spec: {:.4f}, AUC: {:.4f}".format(acc, 
+                                                                      sensitivty,
+                                                                      specificity,
+                                                                      auc))
+    wandb.log({
+        "Final Acc": acc,
+        "Final Sens": sensitivty,
+        "Final Spec": specificity,
+        "Final AUC": auc
+    })
+    wandb.finish(quiet=True)
+    
+main("asd-loo-new", "bt-lars")
