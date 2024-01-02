@@ -251,12 +251,13 @@ class FixViewDataset(torch.utils.data.Dataset):
         return new_image, new_fix
     
     def get_view(self, img, fix, i):
-        for aug in self.augmentations: # apply specified augmentations
-            if aug == 'horizontal_flip' or aug == 'scanpath_reversal':
-                if i == 1:
+        if i != -1: # skip aug if i == -1
+            for aug in self.augmentations: # apply specified augmentations
+                if aug == 'horizontal_flip' or aug == 'scanpath_reversal':
+                    if i == 1:
+                        img, fix = self.augmentation_map[aug](img, fix)
+                else:    
                     img, fix = self.augmentation_map[aug](img, fix)
-            else:    
-                img, fix = self.augmentation_map[aug](img, fix)
 
         fix = self.scale_fixations(fix, img.size[::-1], (self.img_height, self.img_width))
         
@@ -276,7 +277,7 @@ class FixViewDataset(torch.utils.data.Dataset):
         img = Image.open(self.img_id[index])         
         fix = np.array(self.fixation[index].copy())
         
-        return self.get_view(img.copy(), fix.copy(), 0), self.get_view(img.copy(), fix.copy(), 1) 
+        return self.get_view(img.copy(), fix.copy(), -1), self.get_view(img.copy(), fix.copy(), 0), self.get_view(img.copy(), fix.copy(), 1) 
     
     def __len__(self, ):
         return len(self.fixation)

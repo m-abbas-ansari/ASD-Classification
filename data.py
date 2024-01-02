@@ -47,6 +47,97 @@ def read_dataset(anno_path, start_idx=1, end_idx=301):
 
     return anno_dict
 
+def loo_split(anno_dict,subj_id):
+    train_dict = dict()
+    val_dict = dict()
+    # Saliency4ASD dataset has 14 Controls and 14 ASDs
+    if subj_id >=14: # ctrl
+        subj_id -= 14
+        cur_group = 1
+    else:
+        cur_group = 0 # asd
+
+    group_name = ['asd','ctrl']
+
+    for k in anno_dict.keys():
+        if subj_id+1 > len(anno_dict[k][group_name[cur_group]]['fixation']):
+            train_dict[k] = anno_dict[k] # current image does not have enough data, thus skipped for splitting
+        else:
+            train_dict[k] = dict()
+            val_dict[k] = dict()
+            # contructing data for the opposite group (no need for splitting)
+            train_dict[k]['img_size'] = val_dict[k]['img_size'] = anno_dict[k]['img_size']
+            train_dict[k][group_name[1-cur_group]] = anno_dict[k][group_name[1-cur_group]]
+            val_dict[k][group_name[1-cur_group]] = dict()
+            val_dict[k][group_name[1-cur_group]]['fixation'] = []
+            val_dict[k][group_name[1-cur_group]]['duration'] = []
+
+            # constructing data for the current group (split into train/val for leave-one-out validation)
+            train_dict[k][group_name[cur_group]] = dict()
+            val_dict[k][group_name[cur_group]] = dict()
+
+            # splitting based on the relative position of the hold-out subjects
+            if subj_id+1 == len(anno_dict[k][group_name[cur_group]]['fixation']):
+                train_dict[k][group_name[cur_group]]['fixation'] = anno_dict[k][group_name[cur_group]]['fixation'][:subj_id]
+                train_dict[k][group_name[cur_group]]['duration'] = anno_dict[k][group_name[cur_group]]['duration'][:subj_id]
+            else:
+                left_fix = anno_dict[k][group_name[cur_group]]['fixation'][:subj_id]
+                right_fix = anno_dict[k][group_name[cur_group]]['fixation'][(subj_id+1):]
+                if len(left_fix)>0 and not isinstance(left_fix[0],list):
+                    left_fix = [left_fix]
+                if len(right_fix)>0 and not isinstance(right_fix[0],list):
+                    right_fix = [right_fix]
+
+                left_dur = anno_dict[k][group_name[cur_group]]['duration'][:subj_id]
+                right_dur = anno_dict[k][group_name[cur_group]]['duration'][(subj_id+1):]
+                if len(left_dur)>0 and not isinstance(left_dur[0],list):
+                    left_dur = [left_dur]
+                if len(right_dur)>0 and not isinstance(right_dur[0],list):
+                    right_dur = [right_dur]
+
+                train_dict[k][group_name[cur_group]]['fixation'] = left_fix + right_fix
+                train_dict[k][group_name[cur_group]]['duration'] = left_dur + right_dur
+
+            val_dict[k][group_name[cur_group]]['fixation'] = [anno_dict[k][group_name[cur_group]]['fixation'][subj_id]]
+            val_dict[k][group_name[cur_group]]['duration'] = [anno_dict[k][group_name[cur_group]]['duration'][subj_id]]
+
+    return train_dict,val_dict
+
+
+
+def image_selection(train_set,select_number=100):
+    fisher_score = dict()
+    for img in train_set.keys():
+        asd_fix = train_set[img]['asd']['fixation']
+        asd_dur = train_set[img]['asd']['duration']
+        ctrl_fix = train_set[img]['ctrl']['fixation']
+        ctrl_dur = train_set[img]['ctrl']['duration']
+        img_size = train_set[img]['img_size']
+        stat = [[] for _ in range(2)]
+
+        # calculate the fisher score to select discriminative images
+        for group, data in enumerate([(asd_fix,asd_dur),(ctrl_fix,ctrl_dur)]):
+            cur_fix, cur_dur = data
+            for i in range(len(cur_fix)):
+                for j in range(len(cur_fix[i])):
+                    y, x = cur_fix[i][j]
+                    dist = np.sqrt((y-img_size[0]/2)**2 + (x-img_size[1]/2)**2)
+                    dur = cur_dur[i][j]
+                    stat[group].append([y,x,dist,dur])
+        pos = np.array(stat[0])
+        neg = np.array(stat[1])
+        fisher = (np.mean(pos,axis=0)-np.mean(neg,axis=0))**2 / (np.std(pos,axis=0)**2 + np.std(pos,axis=0)**2) # fisher score
+        fisher_score[img] = np.mean(fisher)
+
+    # selecting the images by fisher score
+    sorted_score = sorted(fisher_score.items(),key=operator.itemgetter(1))
+    sorted_score.reverse()
+    selected_img = []
+    for i in range(select_number):
+        selected_img.append(sorted_score[i][0])
+
+    return selected_img
+
 class ASDDataset(data.Dataset):
     def __init__(self,img_dir,data,max_len,img_height,img_width,transform):
         self.img_dir = img_dir
