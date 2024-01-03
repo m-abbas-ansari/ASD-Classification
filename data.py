@@ -8,7 +8,7 @@ import cv2
 import torch
 import pandas as pd
 from transformers import BertTokenizerFast
-
+import operator
 
 def read_dataset(anno_path, start_idx=1, end_idx=301):
     anno_dict = dict()
