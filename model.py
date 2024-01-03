@@ -123,8 +123,8 @@ class Sal_seq(nn.Module):
 
         return x
     
-    def forward(self, x, fixation, duration):
-        valid_len = self.process_lengths(fixation)  # computing valid fixation lengths
+    def forward(self, x, fixation, duration, valid_len):
+        # valid_len = self.process_lengths(fixation)  # computing valid fixation lengths
         x = self.backend(x)
         batch, feat, h, w = x.size()
 

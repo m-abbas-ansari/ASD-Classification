@@ -170,6 +170,7 @@ class ASDDataset(data.Dataset):
         y_lim, x_lim = self.img_size[idx]
         fixation = []
         duration = []
+        valid_len = 0
         invalid = 0
         # only consider the first k fixations
         for i in range(self.max_len):
@@ -181,25 +182,26 @@ class ASDDataset(data.Dataset):
                 if x_fix >=0 and y_fix>=0 and x_fix <= self.img_width and y_fix <= self.img_height:
                     fixation.append([y_fix, x_fix]) # get the corresponding index of fixation on the downsampled feature map
                     duration.append(dur) # duration of corresponding fixation
+                    valid_len += 1
                 else:
                     invalid += 1
             else:
-                fixation.append(0) # pad if necessary
+                fixation.append([0,0]) # pad if necessary
                 duration.append(0)
         for i in range(invalid):
-            fixation.append(0)
+            fixation.append([0,0])
             duration.append(0)
         fixation = torch.from_numpy(np.array(fixation).astype('int'))
         duration = torch.from_numpy(np.array(duration).astype('int'))
-        return fixation, duration
+        return fixation, duration, valid_len
 
     def __getitem__(self,index):
         img = Image.open(self.img_id[index])
         if self.transform is not None: 
             img = self.transform(img)
         label = torch.FloatTensor([self.label[index]])
-        fixation, duration = self.get_fix_dur(index)
-        return img, label, fixation, duration
+        fixation, duration, valid_len = self.get_fix_dur(index)
+        return img, label, fixation, duration, valid_len
 
     def __len__(self,):
         return len(self.fixation)
