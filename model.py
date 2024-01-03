@@ -41,9 +41,10 @@ class G_LSTM(nn.Module):
         return state
     
 class Sal_seq(nn.Module):
-    def __init__(self, backend, seq_len, hidden_size=512, mask=False, joint=False, time_proj_dim=128):
+    def __init__(self, backend, seq_len, im_size = (320, 512), hidden_size=512, mask=False, joint=False, time_proj_dim=128):
         super(Sal_seq, self).__init__()
         self.seq_len = seq_len
+        self.im_size = im_size
         self.mask = mask
         self.joint = joint
 
@@ -108,17 +109,29 @@ class Sal_seq(nn.Module):
         x = x.sum(1).view(batch_size, x.size(2))
         return x
 
+    def get_fix_tokens(self, x, fixs):
+        H,W = self.im_size
+        _, feat, h, w = x.size()
+
+        # We get fixation index in downscaled feature map for given fix coords
+        fixation = (fixs[:, :, 0]*(h-1)/H).long()*w + (fixs[:, :, 1]*(w-1)/W).long()
+
+        x = x.flatten(2)
+        fixation = fixation.view(fixation.size(0), 1, fixation.size(1))
+        fixation = fixation.expand(fixation.size(0), feat, fixation.size(2))
+        x = x.gather(2, fixation)
+
+        return x
+    
     def forward(self, x, fixation, duration):
         valid_len = self.process_lengths(fixation)  # computing valid fixation lengths
         x = self.backend(x)
         batch, feat, h, w = x.size()
-        x = x.view(batch, feat, -1)
 
         # recurrent loop
         state = self.init_hidden(batch)  # initialize hidden state
-        fixation = fixation.view(fixation.size(0), 1, fixation.size(1))
-        fixation = fixation.expand(fixation.size(0), feat, fixation.size(2))
-        x = x.gather(2, fixation.to(torch.int64))
+        x = self.get_fix_tokens(x, fixation)
+        
         output = []
         for i in range(self.seq_len):
             # extract features corresponding to current fixation

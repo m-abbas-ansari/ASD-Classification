@@ -139,15 +139,15 @@ def image_selection(train_set,select_number=100):
     return selected_img
 
 class ASDDataset(data.Dataset):
-    def __init__(self,img_dir,data,max_len,img_height,img_width,transform):
+    def __init__(self,img_dir,data,valid_id,max_len,img_height,img_width,transform):
         self.img_dir = img_dir
-        self.initial_dataset(data)
         self.max_len = max_len
         self.img_height = img_height
         self.img_width = img_width
         self.transform = transform
-
-    def initial_dataset(self,data):
+        self.initial_dataset(data, valid_id)
+    
+    def initial_dataset(self,data, valid_id):
         self.fixation = []
         self.duration = []
         self.label = []
@@ -155,8 +155,8 @@ class ASDDataset(data.Dataset):
         self.img_size = []
 
         for img_id in data.keys():
-            # if not img_id in valid_id:
-            #     continue
+            if not img_id in valid_id:
+                continue
             for group_label, group in enumerate(['ctrl','asd']):
                 self.fixation.extend(data[img_id][group]['fixation'])
                 self.duration.extend(data[img_id][group]['duration'])
@@ -176,10 +176,10 @@ class ASDDataset(data.Dataset):
             if i+1 <= len(fixs):
                 y_fix, x_fix = fixs[i]
                 dur = durs[i]
-                x_fix = int(x_fix*(self.img_width/float(x_lim))/32)
-                y_fix = int(y_fix*(self.img_height/float(y_lim))/33)
-                if x_fix >=0 and y_fix>=0:
-                    fixation.append(y_fix*25 + x_fix) # get the corresponding index of fixation on the downsampled feature map
+                x_fix = int(x_fix*(self.img_width-1)/float(x_lim))
+                y_fix = int(y_fix*(self.img_height-1)/float(y_lim))
+                if x_fix >=0 and y_fix>=0 and x_fix <= self.img_width and y_fix <= self.img_height:
+                    fixation.append([y_fix, x_fix]) # get the corresponding index of fixation on the downsampled feature map
                     duration.append(dur) # duration of corresponding fixation
                 else:
                     invalid += 1
